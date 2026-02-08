@@ -1,27 +1,47 @@
 services:
-  # Jikan API Web Service
   - type: web
     name: jikan-api
     runtime: image
     image:
       url: jikanme/jikan-rest:latest
-    region: oregon  # Options: oregon, frankfurt, singapore, ohio
-    plan: free      # Options: free, starter ($7/month)
-    
-    # Health check endpoint
+    region: oregon
+    plan: free
     healthCheckPath: /
     
-    # Environment Variables
-    envVars:
-      # MongoDB Configuration
-      - key: DB_CONNECTION
-        value: mongodb
-      - key: MONGODB_DSN
-        sync: false  # Set this manually in Render dashboard for security
+    startCommand: |
+      sh -c '
+      echo "=== Generating .env file ===" &&
+      cat > /app/.env <<EOF
+      APP_NAME=Jikan
+      APP_ENV=production
+      APP_KEY=base64:$(openssl rand -base64 32)
+      APP_DEBUG=false
+      APP_URL=${APP_URL:-https://jikan-api-j7jn.onrender.com}
       
-      # Redis Configuration
-      - key: CACHE_DRIVER
-        value: redis
+      LOG_CHANNEL=stderr
+      LOG_LEVEL=error
+      
+      DB_CONNECTION=mongodb
+      MONGODB_DSN=${MONGODB_DSN}
+      
+      CACHE_DRIVER=redis
+      QUEUE_CONNECTION=sync
+      SESSION_DRIVER=file
+      
+      REDIS_HOST=${REDIS_HOST}
+      REDIS_PASSWORD=
+      REDIS_PORT=${REDIS_PORT:-6379}
+      REDIS_CLIENT=phpredis
+      EOF
+      echo "=== Starting RoadRunner ===" &&
+      /app/rr serve -c /app/.rr.yaml
+      '
+    
+    envVars:
+      # No password here - uses variable reference
+      - key: MONGODB_DSN
+        sync: false  # This means "I'll set it in Render dashboard"
+      
       - key: REDIS_HOST
         fromService:
           type: redis
@@ -29,45 +49,14 @@ services:
           property: host
       - key: REDIS_PORT
         value: "6379"
-      - key: REDIS_PASSWORD
-        value: ""
-      - key: REDIS_CLIENT
-        value: phpredis
-      
-      # Application Configuration
-      - key: APP_NAME
-        value: Jikan
       - key: APP_ENV
         value: production
-      - key: APP_DEBUG
-        value: "false"
-      - key: APP_URL
-        value: https://jikan-api-j7jn.onrender.com
-      - key: APP_KEY
-        generateValue: true
-      
-      # Queue & Session
-      - key: QUEUE_CONNECTION
-        value: sync
-      - key: SESSION_DRIVER
-        value: file
-      
-      # Logging
-      - key: LOG_CHANNEL
-        value: stderr
-      - key: LOG_LEVEL
-        value: error
-      
-      # Optional: Timezone
-      - key: APP_TIMEZONE
-        value: UTC
 
-  # Redis Cache Service
   - type: redis
     name: jikan-redis
-    region: oregon  # Must match web service region
-    plan: free      # Free: 25MB, Starter: 256MB ($10/month)
+    region: oregon
+    plan: free
     maxmemoryPolicy: allkeys-lru
     ipAllowList:
       - source: 0.0.0.0/0
-        description: Allow connections from Jikan API service
+        description: Allow all
