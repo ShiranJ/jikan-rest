@@ -1,5 +1,4 @@
 services:
-  # Jikan API Web Service
   - type: web
     name: jikan-api
     runtime: image
@@ -10,13 +9,22 @@ services:
     healthCheckPath: /v4/anime/1
     startCommand: |
       sh -c '
+      echo "=== Starting Jikan Setup ===" &&
       cp /app/.env.dist /app/.env &&
-      sed -i "s/REDIS_HOST=.*/REDIS_HOST=${REDIS_HOST}/" /app/.env &&
-      sed -i "s/REDIS_PORT=.*/REDIS_PORT=${REDIS_PORT}/" /app/.env &&
-      sed -i "s/CACHE_DRIVER=.*/CACHE_DRIVER=redis/" /app/.env &&
-      sed -i "s/APP_ENV=.*/APP_ENV=production/" /app/.env &&
-      sed -i "s/APP_DEBUG=.*/APP_DEBUG=false/" /app/.env &&
-      /app/rr serve -c /app/.rr.yaml
+      echo "=== Copied .env.dist to .env ===" &&
+      cat /app/.env &&
+      echo "=== Generating APP_KEY ===" &&
+      php /app/artisan key:generate --force &&
+      echo "=== Setting environment variables ===" &&
+      sed -i "s|REDIS_HOST=.*|REDIS_HOST=${REDIS_HOST:-127.0.0.1}|" /app/.env &&
+      sed -i "s|REDIS_PORT=.*|REDIS_PORT=${REDIS_PORT:-6379}|" /app/.env &&
+      sed -i "s|CACHE_DRIVER=.*|CACHE_DRIVER=redis|" /app/.env &&
+      sed -i "s|APP_ENV=.*|APP_ENV=production|" /app/.env &&
+      sed -i "s|APP_DEBUG=.*|APP_DEBUG=false|" /app/.env &&
+      echo "=== Final .env file ===" &&
+      cat /app/.env &&
+      echo "=== Starting RoadRunner with reduced workers ===" &&
+      RR_HTTP_POOL_NUM_WORKERS=1 RR_HTTP_POOL_MAX_JOBS=32 /app/rr serve -c /app/.rr.yaml
       '
     envVars:
       - key: REDIS_HOST
@@ -32,8 +40,16 @@ services:
         value: false
       - key: CACHE_DRIVER
         value: redis
+      - key: LOG_LEVEL
+        value: debug
+      # Reduce workers for free tier
+      - key: RR_HTTP_POOL_NUM_WORKERS
+        value: "1"
+      - key: RR_HTTP_POOL_MAX_JOBS
+        value: "32"
+      - key: RR_HTTP_POOL_ALLOCATE_TIMEOUT
+        value: "60s"
 
-  # Redis Cache Service
   - type: redis
     name: jikan-redis
     region: oregon
