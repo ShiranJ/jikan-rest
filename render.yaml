@@ -6,3 +6,32 @@ services:
       url: jikanme/jikan-rest:latest
     region: oregon
     plan: free
+    envVars:
+      # Disable database (not needed)
+      - key: DB_CONNECTION
+        value: ""
+      
+      # Use Redis for caching
+      - key: CACHE_DRIVER
+        value: redis
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: jikan-redis
+          property: host
+      - key: REDIS_PORT
+        value: "6379"
+      
+      - key: APP_ENV
+        value: production
+      - key: APP_KEY
+        generateValue: true
+
+  - type: redis
+    name: jikan-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Allow all
