@@ -8,6 +8,16 @@ services:
     region: oregon
     plan: free
     healthCheckPath: /v4/anime/1
+    startCommand: |
+      sh -c '
+      cp /app/.env.dist /app/.env &&
+      sed -i "s/REDIS_HOST=.*/REDIS_HOST=${REDIS_HOST}/" /app/.env &&
+      sed -i "s/REDIS_PORT=.*/REDIS_PORT=${REDIS_PORT}/" /app/.env &&
+      sed -i "s/CACHE_DRIVER=.*/CACHE_DRIVER=redis/" /app/.env &&
+      sed -i "s/APP_ENV=.*/APP_ENV=production/" /app/.env &&
+      sed -i "s/APP_DEBUG=.*/APP_DEBUG=false/" /app/.env &&
+      /app/rr serve -c /app/.rr.yaml
+      '
     envVars:
       - key: REDIS_HOST
         fromService:
@@ -15,18 +25,13 @@ services:
           name: jikan-redis
           property: host
       - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: jikan-redis
-          property: port
+        value: "6379"
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: false
       - key: CACHE_DRIVER
         value: redis
-      - key: QUEUE_CONNECTION
-        value: sync
 
   # Redis Cache Service
   - type: redis
@@ -34,6 +39,6 @@ services:
     region: oregon
     plan: free
     maxmemoryPolicy: allkeys-lru
-    ipAllowList:  # REQUIRED for Redis on Render
+    ipAllowList:
       - source: 0.0.0.0/0
         description: Allow all connections
