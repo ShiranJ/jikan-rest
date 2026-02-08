@@ -1,17 +1,25 @@
 services:
+  # Jikan API Web Service
   - type: web
     name: jikan-api
     runtime: image
     image:
       url: jikanme/jikan-rest:latest
-    region: oregon
-    plan: free
+    region: oregon  # Options: oregon, frankfurt, singapore, ohio
+    plan: free      # Options: free, starter ($7/month)
+    
+    # Health check endpoint
+    healthCheckPath: /
+    
+    # Environment Variables
     envVars:
-      # Disable database (not needed)
+      # MongoDB Configuration
       - key: DB_CONNECTION
-        value: ""
+        value: mongodb
+      - key: MONGODB_DSN
+        sync: false  # Set this manually in Render dashboard for security
       
-      # Use Redis for caching
+      # Redis Configuration
       - key: CACHE_DRIVER
         value: redis
       - key: REDIS_HOST
@@ -21,17 +29,45 @@ services:
           property: host
       - key: REDIS_PORT
         value: "6379"
+      - key: REDIS_PASSWORD
+        value: ""
+      - key: REDIS_CLIENT
+        value: phpredis
       
+      # Application Configuration
+      - key: APP_NAME
+        value: Jikan
       - key: APP_ENV
         value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        value: https://jikan-api-j7jn.onrender.com
       - key: APP_KEY
         generateValue: true
+      
+      # Queue & Session
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: file
+      
+      # Logging
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+      
+      # Optional: Timezone
+      - key: APP_TIMEZONE
+        value: UTC
 
+  # Redis Cache Service
   - type: redis
     name: jikan-redis
-    region: oregon
-    plan: free
+    region: oregon  # Must match web service region
+    plan: free      # Free: 25MB, Starter: 256MB ($10/month)
     maxmemoryPolicy: allkeys-lru
     ipAllowList:
       - source: 0.0.0.0/0
-        description: Allow all
+        description: Allow connections from Jikan API service
