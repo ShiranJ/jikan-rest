@@ -1,20 +1,33 @@
 services:
   - type: web
     name: jikan-api
-    runtime: docker  # ← Changed from "image" to "docker"
-    dockerfilePath: ./Dockerfile  # ← Build from YOUR Dockerfile
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     region: oregon
     plan: free
     healthCheckPath: /
+    healthCheckTimeout: 30s
     
     envVars:
-      # MongoDB - MUST be set in Render dashboard
-      - key: DB_CONNECTION
-        value: mongodb
-      - key: MONGODB_DSN
-        sync: false  # Set this manually in dashboard
+      # ⭐⭐⭐ MONGODB CONNECTION STRING (Set this in Render Dashboard) ⭐⭐⭐
+      - key: DB_CONNECTION_STRING
+        sync: false  # IMPORTANT: Set this manually with your MongoDB Atlas URI
       
-      # Redis
+      # ⭐⭐⭐ Alternative MongoDB variables your app might expect ⭐⭐⭐
+      - key: MONGODB_DSN
+        sync: false  # Set same as DB_CONNECTION_STRING if app uses this
+      - key: MONGO_URL
+        sync: false  # Some apps use this
+      - key: MONGODB_URI
+        sync: false  # Another common variable name
+      
+      # ⭐⭐⭐ Required MongoDB config for Jikan ⭐⭐⭐
+      - key: DB_CONNECTION
+        value: mongodb  # This tells Jikan to use MongoDB driver
+      - key: DB_DRIVER
+        value: mongodb  # Additional driver setting
+      
+      # Redis Configuration
       - key: CACHE_DRIVER
         value: redis
       - key: REDIS_HOST
@@ -29,7 +42,7 @@ services:
       - key: REDIS_CLIENT
         value: phpredis
       
-      # App
+      # App Configuration
       - key: APP_NAME
         value: Jikan
       - key: APP_ENV
@@ -41,7 +54,15 @@ services:
       - key: APP_URL
         value: https://jikan-api-j7jn.onrender.com
       
-      # Other
+      # ⭐⭐⭐ Database Timeout Settings (Important for Cloud) ⭐⭐⭐
+      - key: MONGODB_CONNECTION_TIMEOUT
+        value: "5000"  # 5 seconds in milliseconds
+      - key: MONGODB_SOCKET_TIMEOUT
+        value: "30000"  # 30 seconds
+      - key: MONGODB_SERVER_SELECTION_TIMEOUT_MS
+        value: "10000"  # 10 seconds
+      
+      # Other Settings
       - key: QUEUE_CONNECTION
         value: sync
       - key: SESSION_DRIVER
@@ -50,7 +71,14 @@ services:
         value: stderr
       - key: LOG_LEVEL
         value: debug
+      
+      # ⭐⭐⭐ Jikan Specific Settings (if needed) ⭐⭐⭐
+      - key: JIKAN_CACHE_EXPIRE
+        value: "3600"  # Cache expiration in seconds
+      - key: JIKAN_RATE_LIMIT
+        value: "30"    # Requests per minute
 
+  # Redis Service
   - type: redis
     name: jikan-redis
     region: oregon
