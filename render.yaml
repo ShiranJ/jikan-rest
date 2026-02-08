@@ -1,14 +1,13 @@
 services:
-  # Jikan API Web Service
   - type: web
     name: jikan-api
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    region: oregon  # Choose: oregon, frankfurt, singapore, ohio
-    plan: free  # free tier available
+    runtime: image
+    image:
+      url: docker.io/jikanme/jikan-rest:latest  # Use official pre-built image
+    region: oregon
+    plan: free
     healthCheckPath: /v4/anime/1
     envVars:
-      # Redis Configuration
       - key: REDIS_HOST
         fromService:
           type: redis
@@ -19,26 +18,15 @@ services:
           type: redis
           name: jikan-redis
           property: port
-      # App Configuration
-      - key: APP_NAME
-        value: Jikan
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: false
-      - key: APP_URL
-        value: https://your-app-name.onrender.com
       - key: CACHE_DRIVER
         value: redis
-      - key: QUEUE_CONNECTION
-        value: sync
 
-  # Redis Cache Service
   - type: redis
     name: jikan-redis
-    region: oregon  # Must match web service region
-    plan: free  # Free plan: 25MB RAM
-    maxmemoryPolicy: allkeys-lru  # Evict least recently used keys
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: Allow all (for internal Render connections)
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
