@@ -1,9 +1,10 @@
 services:
+  # Jikan API Web Service
   - type: web
     name: jikan-api
     runtime: image
     image:
-      url: docker.io/jikanme/jikan-rest:latest  # Use official pre-built image
+      url: jikanme/jikan-rest:latest
     region: oregon
     plan: free
     healthCheckPath: /v4/anime/1
@@ -24,9 +25,15 @@ services:
         value: false
       - key: CACHE_DRIVER
         value: redis
+      - key: QUEUE_CONNECTION
+        value: sync
 
+  # Redis Cache Service
   - type: redis
     name: jikan-redis
     region: oregon
     plan: free
     maxmemoryPolicy: allkeys-lru
+    ipAllowList:  # REQUIRED for Redis on Render
+      - source: 0.0.0.0/0
+        description: Allow all connections
